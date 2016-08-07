@@ -61,16 +61,6 @@
     MOD_SUPER_DEALLOC();
 }
 
-- (BOOL)fileSync
-{
-    return mongoc_write_concern_get_fsync(self.mongocWriteConcern);
-}
-
-- (void)setFileSync:(BOOL)fsync
-{
-    mongoc_write_concern_set_fsync(self.mongocWriteConcern, fsync);
-}
-
 - (BOOL)journal
 {
     return mongoc_write_concern_get_journal(self.mongocWriteConcern);

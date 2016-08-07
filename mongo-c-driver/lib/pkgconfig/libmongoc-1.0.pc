@@ -1,0 +1,11 @@
+prefix=/Users/vino/code/opensource/mongo-c-driver/install
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${exec_prefix}/include
+
+Name: libmongoc
+Description: The libmongoc MongoDB client library.
+Version: 1.4.0
+Requires: libbson-1.0
+Libs: -L${libdir} -lmongoc-1.0 -lsasl2 -framework Security -framework CoreFoundation 
+Cflags: -I${includedir}/libmongoc-1.0
