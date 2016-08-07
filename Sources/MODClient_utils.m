@@ -242,6 +242,8 @@ static void defaultLogCallback(mongoc_log_level_t  log_level,
         case MONGOC_ERROR_QUERY_NOT_TAILABLE:
             errorMessage = @"MONGOC_ERROR_QUERY_NOT_TAILABLE";
             break;
+        default:
+            break;
     }
     if (strlen(error.message) > 0) {
         errorMessage = [NSString stringWithCString:error.message encoding:NSUTF8StringEncoding];
@@ -304,7 +306,7 @@ static void defaultLogCallback(mongoc_log_level_t  log_level,
             {
                 NSData *data;
                 bson_subtype_t subType;
-                size_t length;
+                uint32_t length;
                 const uint8_t *binary;
                 
                 bson_iter_binary(iterator, &subType, &length, &binary);
@@ -444,22 +446,22 @@ static void defaultLogCallback(mongoc_log_level_t  log_level,
     NSParameterAssert(key != NULL);
     NSParameterAssert(bson != NULL);
     if ([value isKindOfClass:NSNull.class]) {
-        bson_append_null(bson, keyString, strlen(keyString));
+        bson_append_null(bson, keyString, (int) strlen(keyString));
     } else if ([value isKindOfClass:NSString.class]) {
         const char *cStringValue = [value UTF8String];
         
-        bson_append_utf8(bson, keyString, strlen(keyString), cStringValue, strlen(cStringValue));
+        bson_append_utf8(bson, keyString, (int) strlen(keyString), cStringValue, (int) strlen(cStringValue));
     } else if ([value isKindOfClass:[MODSortedDictionary class]]) {
         bson_t childBson = BSON_INITIALIZER;
         
-        bson_append_document_begin(bson, keyString, strlen(keyString), &childBson);
+        bson_append_document_begin(bson, keyString, (int) strlen(keyString), &childBson);
         [self appendObject:value toBson:&childBson];
         bson_append_document_end(bson, &childBson);
     } else if ([value isKindOfClass:[NSArray class]]) {
         size_t ii = 0;
         bson_t childBson = BSON_INITIALIZER;
         
-        bson_append_array_begin(bson, keyString, strlen(keyString), &childBson);
+        bson_append_array_begin(bson, keyString, (int) strlen(keyString), &childBson);
         for (id arrayValue in value) {
             NSString *arrayKey;
             
@@ -469,52 +471,54 @@ static void defaultLogCallback(mongoc_log_level_t  log_level,
         }
         bson_append_array_end(bson, &childBson);
     } else if ([value isKindOfClass:[MODObjectId class]]) {
-        bson_append_oid(bson, keyString, strlen(keyString), [value bsonObjectId]);
+        bson_append_oid(bson, keyString, (int) strlen(keyString), [value bsonObjectId]);
     } else if ([value isKindOfClass:[MODRegex class]]) {
-        bson_append_regex(bson, keyString, strlen(keyString), [value pattern].UTF8String, [(MODRegex *)value options].UTF8String);
+        bson_append_regex(bson, keyString, (int) strlen(keyString), [value pattern].UTF8String, [(MODRegex *)value options].UTF8String);
     } else if ([value isKindOfClass:[MODTimestamp class]]) {
-        bson_append_timestamp(bson, keyString, strlen(keyString), [value tValue], [value iValue]);
+        bson_append_timestamp(bson, keyString, (int) strlen(keyString), [value tValue], [value iValue]);
     } else if ([value isKindOfClass:[NSNumber class]]) {
         if (strcmp([value objCType], @encode(BOOL)) == 0) {
-            bson_append_bool(bson, keyString, strlen(keyString), [value boolValue]);
+            bson_append_bool(bson, keyString, (int) strlen(keyString), [value boolValue]);
         } else if (strcmp([value objCType], @encode(int8_t)) == 0
                    || strcmp([value objCType], @encode(uint8_t)) == 0
                    || strcmp([value objCType], @encode(int32_t)) == 0) {
-            bson_append_int32(bson, keyString, strlen(keyString), [value intValue]);
+            bson_append_int32(bson, keyString, (int) strlen(keyString), [value intValue]);
         } else if (strcmp([value objCType], @encode(float)) == 0
                    || strcmp([value objCType], @encode(double)) == 0) {
-            bson_append_double(bson, keyString, strlen(keyString), [value doubleValue]);
+            bson_append_double(bson, keyString, (int) strlen(keyString), [value doubleValue]);
         } else {
-            bson_append_int64(bson, keyString, strlen(keyString), [value longLongValue]);
+            bson_append_int64(bson, keyString, (int) strlen(keyString), [value longLongValue]);
         }
     } else if ([value isKindOfClass:[NSDate class]]) {
-        bson_append_date_time(bson, keyString, strlen(keyString), llround([value timeIntervalSince1970] * 1000.0));
+        bson_append_date_time(bson, keyString, (int) strlen(keyString), llround([value timeIntervalSince1970] * 1000.0));
     } else if ([value isKindOfClass:[NSData class]]) {
-        bson_append_binary(bson, keyString, strlen(keyString), BSON_SUBTYPE_BINARY, [value bytes], [value length]);
+        NSData *data = (NSData *)value;
+        bson_append_binary(bson, keyString, (int) strlen(keyString), BSON_SUBTYPE_BINARY, data.bytes, (uint32_t) data.length);
     } else if ([value isKindOfClass:[MODBinary class]]) {
-        bson_append_binary(bson, keyString, strlen(keyString), [value binaryType], [value binaryData].bytes, [value binaryData].length);
+        NSData *data = ((MODBinary *) value).binaryData;
+        bson_append_binary(bson, keyString, (int) strlen(keyString), [value binaryType], data.bytes, (uint32_t) data.length);
     } else if ([value isKindOfClass:[MODUndefined class]]) {
-        bson_append_undefined(bson, keyString, strlen(keyString));
+        bson_append_undefined(bson, keyString, (int) strlen(keyString));
     } else if ([value isKindOfClass:[MODSymbol class]]) {
-        bson_append_symbol(bson, keyString, strlen(keyString), [[value value] UTF8String], strlen([[value value] UTF8String]));
+        bson_append_symbol(bson, keyString, (int) strlen(keyString), [[value value] UTF8String], (int) strlen([[value value] UTF8String]));
     } else if ([value isKindOfClass:[MODUndefined class]]) {
-        bson_append_undefined(bson, keyString, strlen(keyString));
+        bson_append_undefined(bson, keyString, (int) strlen(keyString));
     } else if ([value isKindOfClass:[MODMinKey class]]) {
-        bson_append_minkey(bson, keyString, strlen(keyString));
+        bson_append_minkey(bson, keyString, (int) strlen(keyString));
     } else if ([value isKindOfClass:[MODMaxKey class]]) {
-        bson_append_maxkey(bson, keyString, strlen(keyString));
+        bson_append_maxkey(bson, keyString, (int) strlen(keyString));
     } else if ([value isKindOfClass:[MODFunction class]]) {
-        bson_append_code(bson, keyString, strlen(keyString), [value function].UTF8String);
+        bson_append_code(bson, keyString, (int) strlen(keyString), [value function].UTF8String);
     } else if ([value isKindOfClass:[MODScopeFunction class]]) {
         bson_t bsonScope = BSON_INITIALIZER;
         
         if ([value scope]) {
             [self appendObject:[value scope] toBson:&bsonScope];
         }
-        bson_append_code_with_scope(bson, keyString, strlen(keyString), [value function].UTF8String, &bsonScope);
+        bson_append_code_with_scope(bson, keyString, (int) strlen(keyString), [value function].UTF8String, &bsonScope);
         bson_destroy(&bsonScope);
     } else if ([value isKindOfClass:[MODDBPointer class]]) {
-        bson_append_dbpointer(bson, keyString, strlen(keyString), [value collectionName].UTF8String, [value objectId].bsonObjectId);
+        bson_append_dbpointer(bson, keyString, (int) strlen(keyString), [value collectionName].UTF8String, [value objectId].bsonObjectId);
     } else {
         NSLog(@"*********************** class %@ key %@ %d", NSStringFromClass([value class]), key, __LINE__);
         NSAssert(NO, @"class %@ key %@ line %d", NSStringFromClass([value class]), key, __LINE__);
